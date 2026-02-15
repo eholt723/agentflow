@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from app.clients.inference_client import run_inference
+from api.app.clients.inference_client import run_inference
+
 
 app = FastAPI(title="AgentFlow Decision Intelligence API")
 
