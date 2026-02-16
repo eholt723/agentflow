@@ -34,3 +34,10 @@ This project demonstrates system-level thinking across AI inference, agent reaso
 
 ### High-Level Flow
 
+- User Input
+- FastAPI API Layer
+- LangGraph Agent Planner
+- Tool Execution
+- Optional n8n Workflow Trigger
+- Final Response
+
