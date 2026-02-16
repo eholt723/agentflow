@@ -1,7 +1,7 @@
 # AgentFlow  
-### Autonomous Decision Intelligence Agent (LangGraph + FastAPI + n8n)
+### Decision Intelligence Business Assistant (LangGraph + FastAPI + n8n)
 
-AgentFlow is a multi-service agentic system that demonstrates autonomous reasoning, structured tool execution, and workflow automation in a production-style architecture.
+AgentFlow is a multi-service system that demonstrates autonomous reasoning, structured tool execution, and event-driven workflow automation within a production-style architecture.
 
 This project combines:
 
@@ -16,7 +16,7 @@ The goal is to showcase end-to-end agent orchestration rather than a simple chat
 
 ## Project Intent
 
-AgentFlow is designed as a **Decision Intelligence Agent** for small business operations.
+AgentFlow is designed as a **Decision Intelligence Business Assistant** for small business operations.
 
 The system:
 
@@ -34,10 +34,10 @@ This project demonstrates system-level thinking across AI inference, agent reaso
 
 ### High-Level Flow
 
-- User Input
+User Input
 - FastAPI API Layer
-- LangGraph Agent Planner
-- Tool Execution
+- LangGraph Planner
+- Structured Tool Execution
 - Optional n8n Workflow Trigger
 - Final Response
 
