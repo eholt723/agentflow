@@ -1,20 +1,71 @@
+# =========================
 # Python
+# =========================
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+*.so
 *.sqlite3
-.env
 
-# venv
+# Virtual environments
 venv/
 .venv/
+env/
+ENV/
 
-# macOS
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Test / coverage
+.coverage
+.coverage.*
+.pytest_cache/
+htmlcov/
+.mypy_cache/
+.cache/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+uvicorn.log
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
 .DS_Store
-
-# model files
-*.gguf
+Thumbs.db
 
 # Docker
-*.log
+docker-compose.override.yml
+*.pid
+
+# Local data / uploads
+data/
+uploads/
+tmp/
+*.db
+
+# Model files
+*.gguf
+*.bin
+*.pt
+*.pth
+*.onnx
+
+# Jupyter (if ever used)
+.ipynb_checkpoints/
+
+# Node (if frontend ever added)
+node_modules/

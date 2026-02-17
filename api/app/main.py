@@ -2,11 +2,12 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any, List
 
 from fastapi import FastAPI, File, UploadFile, HTTPException, Query
 from fastapi.responses import JSONResponse
 
-from api.app.schemas.agent import AgentRequest, AgentResponse
+from api.app.schemas.agent import AgentRequest, AgentResponse, ToolAction
 from api.app.runner.agent_runner import run_agent
 
 app = FastAPI(title="AgentFlow Universal File Intelligence API")
@@ -17,10 +18,59 @@ async def health():
     return {"status": "ok"}
 
 
+def _normalize_actions(actions: Any) -> List[ToolAction]:
+    """
+    Ensures actions_taken always conforms to List[ToolAction],
+    even if lower layers return strings or raw dicts.
+    """
+    if not actions:
+        return []
+
+    normalized: List[ToolAction] = []
+
+    if isinstance(actions, list):
+        for item in actions:
+            if isinstance(item, ToolAction):
+                normalized.append(item)
+            elif isinstance(item, str):
+                normalized.append(
+                    ToolAction(
+                        kind="event",
+                        name=item,
+                        ok=True,
+                        ms=0,
+                        details={},
+                    )
+                )
+            elif isinstance(item, dict):
+                normalized.append(ToolAction(**item))
+            else:
+                normalized.append(
+                    ToolAction(
+                        kind="event",
+                        name="invalid_action_item",
+                        ok=False,
+                        ms=0,
+                        details={"type": type(item).__name__},
+                    )
+                )
+        return normalized
+
+    return [
+        ToolAction(
+            kind="event",
+            name="invalid_actions_shape",
+            ok=False,
+            ms=0,
+            details={"type": type(actions).__name__},
+        )
+    ]
+
+
 @app.post("/agent", response_model=AgentResponse)
 async def agent(request: AgentRequest) -> AgentResponse:
     """
-    Message-driven agent endpoint (LangGraph orchestration later).
+    Message-driven agent endpoint.
 
     Accepts: JSON { message, metadata? }
     Returns: consistent AgentResponse shape every time.
@@ -33,17 +83,29 @@ async def agent(request: AgentRequest) -> AgentResponse:
             request_id=request_id,
             metadata=request.metadata,
         )
-        # run_agent returns a dict shaped like AgentResponse
+
+        # Normalize actions to satisfy schema
+        result["actions_taken"] = _normalize_actions(result.get("actions_taken"))
+
         return AgentResponse(**result)
+
     except HTTPException:
         raise
+
     except Exception as e:
-        # Consistent error shape, no stack traces leaked
         return AgentResponse(
             request_id=request_id,
             response="Agent failed to process the request.",
             anomaly_detected=False,
-            actions_taken=["error"],
+            actions_taken=[
+                ToolAction(
+                    kind="event",
+                    name="agent_error",
+                    ok=False,
+                    ms=0,
+                    details={"error": str(e)},
+                )
+            ],
             warnings=[str(e)],
         )
 
@@ -58,7 +120,7 @@ async def analyze_file(
     Phase 1: Contract-first endpoint.
 
     Accepts: CSV/XLSX/PDF/DOCX/TXT
-    Returns: consistent JSON shape every time (reports enabled/disabled based on routing).
+    Returns: consistent JSON shape every time.
     """
 
     filename = (file.filename or "").strip()
@@ -67,8 +129,8 @@ async def analyze_file(
     if not filename:
         raise HTTPException(status_code=400, detail="Missing filename on upload.")
 
-    # Basic, deterministic fallback classification (Phase 1)
     ext = filename.lower().split(".")[-1] if "." in filename else ""
+
     if ext in {"csv", "xlsx", "xls"}:
         doc_label = "tabular_data"
         doc_reason = f"File extension .{ext} indicates tabular data."
@@ -85,7 +147,6 @@ async def analyze_file(
         doc_confidence = 0.4
         routed = "unknown"
 
-    # Contract-first, consistent shape
     payload = {
         "document_type": {
             "label": doc_label,
@@ -98,7 +159,10 @@ async def analyze_file(
             "file_extension": ext or None,
         },
         "tabular_reports": {
-            "anomaly_report": {"enabled": bool(routed == "tabular" and run_anomaly), "anomalies": []},
+            "anomaly_report": {
+                "enabled": bool(routed == "tabular" and run_anomaly),
+                "anomalies": [],
+            },
             "dedup_report": {
                 "enabled": bool(routed == "tabular" and run_dedup),
                 "entity_column": None,
@@ -120,7 +184,15 @@ async def analyze_file(
             if routed == "document"
             else "Could not confidently classify file; no analyzers run."
         ),
-        "actions_taken": ["classified_document_type"],
+        "actions_taken": [
+            {
+                "kind": "event",
+                "name": "classified_document_type",
+                "ok": True,
+                "ms": 0,
+                "details": {},
+            }
+        ],
     }
 
     return JSONResponse(content=payload)
