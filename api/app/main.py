@@ -1,14 +1,9 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
-from api.app.clients.inference_client import run_inference
+from __future__ import annotations
 
+from fastapi import FastAPI, File, UploadFile, HTTPException, Query
+from fastapi.responses import JSONResponse
 
-app = FastAPI(title="AgentFlow Decision Intelligence API")
-
-
-class AnalyzeRequest(BaseModel):
-    raw_notes: str
-    criteria: str | None = None
+app = FastAPI(title="AgentFlow Universal File Intelligence API")
 
 
 @app.get("/health")
@@ -16,43 +11,79 @@ async def health():
     return {"status": "ok"}
 
 
-@app.post("/analyze")
-async def analyze(request: AnalyzeRequest):
-    system_prompt = """
-You are a structured Decision Intelligence Agent.
+@app.post("/agent/analyze")
+async def analyze_file(
+    file: UploadFile = File(...),
+    run_anomaly: bool = Query(True, description="Run tabular anomaly detection when applicable"),
+    run_dedup: bool = Query(True, description="Run tabular dedup/standardization when applicable"),
+):
+    """
+    Phase 1: Contract-first endpoint.
 
-Your job is to convert unstructured evaluation notes into a professional,
-evidence-based decision memo.
+    Accepts: CSV/XLSX/PDF/DOCX/TXT
+    Returns: consistent JSON shape every time (reports enabled/disabled based on routing).
+    """
 
-Return output in clear sections:
+    filename = (file.filename or "").strip()
+    content_type = (file.content_type or "").strip().lower()
 
-1. Executive Summary
-2. Strengths
-3. Risks / Concerns
-4. Missing Information
-5. Recommendation
-6. Confidence (Low / Medium / High)
+    if not filename:
+        raise HTTPException(status_code=400, detail="Missing filename on upload.")
 
-Be concise, professional, and objective.
-"""
+    # Basic, deterministic fallback classification (Phase 1)
+    ext = filename.lower().split(".")[-1] if "." in filename else ""
+    if ext in {"csv", "xlsx", "xls"}:
+        doc_label = "tabular_data"
+        doc_reason = f"File extension .{ext} indicates tabular data."
+        doc_confidence = 0.95
+        routed = "tabular"
+    elif ext in {"pdf", "docx", "txt"}:
+        doc_label = "document_text"
+        doc_reason = f"File extension .{ext} indicates a text document."
+        doc_confidence = 0.85
+        routed = "document"
+    else:
+        doc_label = "unknown"
+        doc_reason = "File extension not recognized; treating as unknown."
+        doc_confidence = 0.4
+        routed = "unknown"
 
-    user_prompt = f"""
-Raw Notes:
-{request.raw_notes}
+    # Contract-first, consistent shape
+    payload = {
+        "document_type": {
+            "label": doc_label,
+            "confidence": doc_confidence,
+            "reason": doc_reason,
+        },
+        "detected": {
+            "file_name": filename,
+            "content_type": content_type or None,
+            "file_extension": ext or None,
+        },
+        "tabular_reports": {
+            "anomaly_report": {"enabled": bool(routed == "tabular" and run_anomaly), "anomalies": []},
+            "dedup_report": {
+                "enabled": bool(routed == "tabular" and run_dedup),
+                "entity_column": None,
+                "clusters": [],
+            },
+        },
+        "document_reports": {
+            "policy_check": {
+                "enabled": bool(routed == "document"),
+                "key_points": [],
+                "risks": [],
+                "missing": [],
+            }
+        },
+        "summary": (
+            "Detected tabular data; ready to run anomaly + dedup analyzers."
+            if routed == "tabular"
+            else "Detected document text; ready to run key points / risk checklist analyzer."
+            if routed == "document"
+            else "Could not confidently classify file; no analyzers run."
+        ),
+        "actions_taken": ["classified_document_type"],
+    }
 
-Evaluation Criteria:
-{request.criteria or "None provided"}
-"""
-
-    try:
-        llm_output = await run_inference(system_prompt, user_prompt)
-
-        return {
-            "memo": llm_output
-        }
-
-    except Exception as e:
-        return {
-            "error": "Inference service unavailable",
-            "details": str(e)
-        }
+    return JSONResponse(content=payload)
