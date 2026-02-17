@@ -1,7 +1,13 @@
+# app/main.py
 from __future__ import annotations
+
+import uuid
 
 from fastapi import FastAPI, File, UploadFile, HTTPException, Query
 from fastapi.responses import JSONResponse
+
+from api.app.schemas.agent import AgentRequest, AgentResponse
+from api.app.runner.agent_runner import run_agent
 
 app = FastAPI(title="AgentFlow Universal File Intelligence API")
 
@@ -9,6 +15,37 @@ app = FastAPI(title="AgentFlow Universal File Intelligence API")
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.post("/agent", response_model=AgentResponse)
+async def agent(request: AgentRequest) -> AgentResponse:
+    """
+    Message-driven agent endpoint (LangGraph orchestration later).
+
+    Accepts: JSON { message, metadata? }
+    Returns: consistent AgentResponse shape every time.
+    """
+    request_id = str(uuid.uuid4())
+
+    try:
+        result = await run_agent(
+            message=request.message,
+            request_id=request_id,
+            metadata=request.metadata,
+        )
+        # run_agent returns a dict shaped like AgentResponse
+        return AgentResponse(**result)
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Consistent error shape, no stack traces leaked
+        return AgentResponse(
+            request_id=request_id,
+            response="Agent failed to process the request.",
+            anomaly_detected=False,
+            actions_taken=["error"],
+            warnings=[str(e)],
+        )
 
 
 @app.post("/agent/analyze")

@@ -1,17 +1,18 @@
-from typing import Dict, Any
+# runner/agent_runner.py
+from __future__ import annotations
+
+from typing import Any, Dict, Optional
+
+from api.app.graph.decision_graph import run_graph
 
 
-async def run_agent(message: str) -> Dict[str, Any]:
+async def run_agent(
+    message: str,
+    request_id: str,
+    metadata: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
     """
-    Placeholder for LangGraph orchestration.
-    Will later call tools + inference.
+    Orchestrates the agent run. Today: simple graph stub.
+    Later: LangGraph compile + invoke.
     """
-
-    # Temporary logic
-    anomaly = "anomaly" in message.lower()
-
-    return {
-        "response": f"Agent processed: {message}",
-        "anomaly_detected": anomaly,
-        "actions_taken": []
-    }
+    return await run_graph(message=message, request_id=request_id, metadata=metadata)

@@ -1,3 +1,4 @@
+# api/app/graph/tools/analytics_tool.py
 def run_analytics_query(date: str) -> dict:
     return {
         "metric": "daily_revenue",
