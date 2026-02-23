@@ -37,6 +37,9 @@ htmlcov/
 logs/
 uvicorn.log
 
+# Claude Code
+CLAUDE.md
+
 # IDE / Editor
 .vscode/
 .idea/
