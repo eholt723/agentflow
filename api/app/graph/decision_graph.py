@@ -4,10 +4,11 @@ from __future__ import annotations
 import re
 import time
 from datetime import date, timedelta
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from api.app.graph.tools.analytics_tool import run_analytics_query
 from api.app.graph.tools.database_tool import run_database_lookup
+from api.app.schemas.agent import ToolAction
 
 
 def _extract_target_date(message: str) -> str:
@@ -17,19 +18,25 @@ def _extract_target_date(message: str) -> str:
     return date.today().isoformat()
 
 
+def _action(kind: str, name: str, ok: bool, ms: int, details: Dict[str, Any] = {}) -> ToolAction:
+    return ToolAction(kind=kind, name=name, ok=ok, ms=ms, details=details)
+
+
 async def run_graph(
     message: str,
     request_id: str,
     metadata: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
 
-    actions_taken: list[str] = ["graph_start"]
-    warnings: list[str] = []
+    actions_taken: List[ToolAction] = [
+        _action("event", "graph_start", ok=True, ms=0)
+    ]
+    warnings: List[str] = []
 
     anomaly_route = "anomaly" in message.lower()
 
     if anomaly_route:
-        actions_taken.append("route:anomaly_check")
+        actions_taken.append(_action("route", "anomaly_check", ok=True, ms=0))
 
         target_date = _extract_target_date(message)
 
@@ -38,18 +45,16 @@ async def run_graph(
         try:
             analytics_result = run_analytics_query(target_date)
             elapsed_ms = int((time.perf_counter() - t0) * 1000)
-            actions_taken.append(f"tool:analytics_query ok ms={elapsed_ms}")
+            actions_taken.append(
+                _action("tool", "analytics_query", ok=True, ms=elapsed_ms, details={"date": target_date})
+            )
         except Exception as e:
             elapsed_ms = int((time.perf_counter() - t0) * 1000)
-            actions_taken.append({
-            "kind": "tool",
-            "name": "analytics_query",
-            "ok": True,
-            "ms": elapsed_ms,
-            "details": {"date": target_date}
-            })
-
+            actions_taken.append(
+                _action("tool", "analytics_query", ok=False, ms=elapsed_ms, details={"date": target_date, "error": str(e)})
+            )
             warnings.append(str(e))
+            actions_taken.append(_action("event", "graph_finalize", ok=False, ms=0))
             return {
                 "request_id": request_id,
                 "response": "Analytics query failed.",
@@ -67,10 +72,14 @@ async def run_graph(
             try:
                 db_context = run_database_lookup(target_date)
                 elapsed_ms = int((time.perf_counter() - t1) * 1000)
-                actions_taken.append(f"tool:database_lookup ok ms={elapsed_ms}")
+                actions_taken.append(
+                    _action("tool", "database_lookup", ok=True, ms=elapsed_ms, details={"date": target_date})
+                )
             except Exception as e:
                 elapsed_ms = int((time.perf_counter() - t1) * 1000)
-                actions_taken.append(f"tool:database_lookup error ms={elapsed_ms}")
+                actions_taken.append(
+                    _action("tool", "database_lookup", ok=False, ms=elapsed_ms, details={"error": str(e)})
+                )
                 warnings.append(str(e))
 
         # ---- Build Response ----
@@ -93,11 +102,11 @@ async def run_graph(
             response += "No anomaly detected."
 
     else:
-        actions_taken.append("route:general")
+        actions_taken.append(_action("route", "general", ok=True, ms=0))
         anomaly_detected = False
         response = f"Agent processed: {message}"
 
-    actions_taken.append("graph_finalize")
+    actions_taken.append(_action("event", "graph_finalize", ok=True, ms=0))
 
     return {
         "request_id": request_id,
