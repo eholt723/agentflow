@@ -8,8 +8,16 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-SUPPORTED_EXTENSIONS = {"pdf", "docx", "txt", "csv", "xlsx", "xls"}
+SUPPORTED_EXTENSIONS = {"pdf", "docx", "txt", "csv", "xlsx", "xls", "jpg", "jpeg", "png", "webp"}
+IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 MAX_TEXT_CHARS = 12_000  # truncation ceiling before LLM calls
+
+_MEDIA_TYPES = {
+    "jpg": "image/jpeg",
+    "jpeg": "image/jpeg",
+    "png": "image/png",
+    "webp": "image/webp",
+}
 
 
 @dataclass
@@ -20,6 +28,8 @@ class ParsedDocument:
     rows: List[Dict[str, Any]] = field(default_factory=list)
     row_count: int = 0
     parse_error: Optional[str] = None
+    image_bytes: Optional[bytes] = None   # set for image uploads; vision LLM transcribes
+    image_media_type: Optional[str] = None
 
     @property
     def truncated_text(self) -> str:
@@ -41,6 +51,8 @@ def parse_document(filename: str, content: bytes) -> ParsedDocument:
         return _parse_txt(filename, ext, content)
     elif ext in {"csv", "xlsx", "xls"}:
         return _parse_tabular(filename, ext, content)
+    elif ext in IMAGE_EXTENSIONS:
+        return _parse_image(filename, ext, content)
     else:
         return ParsedDocument(
             filename=filename, extension=ext,
@@ -86,6 +98,16 @@ def _parse_txt(filename: str, ext: str, content: bytes) -> ParsedDocument:
         return ParsedDocument(filename=filename, extension=ext, text=text)
     except Exception as e:
         return ParsedDocument(filename=filename, extension=ext, parse_error=str(e))
+
+
+def _parse_image(filename: str, ext: str, content: bytes) -> ParsedDocument:
+    """Store raw image bytes for vision LLM transcription in analyze_runner."""
+    media_type = _MEDIA_TYPES.get(ext, "image/jpeg")
+    logger.info("image_parse filename=%s media_type=%s bytes=%d", filename, media_type, len(content))
+    return ParsedDocument(
+        filename=filename, extension=ext,
+        image_bytes=content, image_media_type=media_type,
+    )
 
 
 def _parse_tabular(filename: str, ext: str, content: bytes) -> ParsedDocument:
