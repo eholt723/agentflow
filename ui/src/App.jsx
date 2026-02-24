@@ -86,6 +86,13 @@ export default function App() {
           {result && <ResultCard result={result} />}
         </div>
       </main>
+
+      <footer className="max-w-5xl mx-auto px-4 pb-6 flex justify-end">
+        <div className="text-right">
+          <p className="text-xs text-slate-400 dark:text-slate-600">Created by</p>
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-500">Eric Holt</p>
+        </div>
+      </footer>
     </div>
   )
 }

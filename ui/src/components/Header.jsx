@@ -1,14 +1,21 @@
 export default function Header({ dark, onToggle }) {
   return (
-    <header className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
-      <div>
+    <header className="grid grid-cols-3 items-center px-6 py-4 border-b border-slate-200 dark:border-slate-700">
+      {/* Left — spacer to balance the toggle */}
+      <div />
+
+      {/* Center — title */}
+      <div className="text-center">
         <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
           AgentFlow
         </h1>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-          HR Document Intelligence
+          AI-Powered Hiring Intelligence
         </p>
       </div>
+
+      {/* Right — dark mode toggle */}
+      <div className="flex justify-end">
       <button
         onClick={onToggle}
         className="p-2 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-700 transition-colors"
@@ -28,6 +35,7 @@ export default function Header({ dark, onToggle }) {
           </svg>
         )}
       </button>
+      </div>
     </header>
   )
 }
