@@ -1,23 +1,37 @@
 # app/main.py
 from __future__ import annotations
 
+import logging
 import uuid
+from contextlib import asynccontextmanager
 from typing import Any, List, Optional
 
-from fastapi import FastAPI, File, Form, UploadFile, HTTPException, Query
+from fastapi import FastAPI, File, Form, Header, HTTPException, Query, UploadFile
 from fastapi.responses import JSONResponse
 
+from api.app.db.database import init_db
+from api.app.db.repository import (
+    get_sessions_by_id,
+    list_sessions,
+    save_agent_session,
+    save_analyze_session,
+)
 from api.app.schemas.agent import AgentRequest, AgentResponse, ToolAction
 from api.app.schemas.analyze import AnalyzeResponse
+from api.app.schemas.session import SessionRecord
 from api.app.runner.agent_runner import run_agent
 from api.app.runner.analyze_runner import run_analyze
 
-app = FastAPI(title="AgentFlow HR Intelligence API")
+logger = logging.getLogger(__name__)
 
 
-@app.get("/health")
-async def health():
-    return {"status": "ok"}
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_db()
+    yield
+
+
+app = FastAPI(title="AgentFlow HR Intelligence API", lifespan=lifespan)
 
 
 def _normalize_actions(actions: Any) -> List[ToolAction]:
@@ -57,12 +71,26 @@ def _normalize_actions(actions: Any) -> List[ToolAction]:
     ]
 
 
+def _extract_recommendation(analysis: dict) -> Optional[str]:
+    """Pull recommendation string out of analysis dict if present."""
+    return analysis.get("recommendation") if isinstance(analysis, dict) else None
+
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
 @app.post("/agent", response_model=AgentResponse)
-async def agent(request: AgentRequest) -> AgentResponse:
+async def agent(
+    request: AgentRequest,
+    x_session_id: Optional[str] = Header(default=None),
+) -> AgentResponse:
     """
     Message-driven agent endpoint.
 
     Accepts: JSON { message, metadata? }
+    Optional header X-Session-ID groups related calls into one session.
     Returns: consistent AgentResponse shape every time.
     """
     request_id = str(uuid.uuid4())
@@ -74,7 +102,19 @@ async def agent(request: AgentRequest) -> AgentResponse:
             metadata=request.metadata,
         )
         result["actions_taken"] = _normalize_actions(result.get("actions_taken"))
-        return AgentResponse(**result)
+        response = AgentResponse(**result)
+
+        await save_agent_session(
+            session_id=x_session_id,
+            request_id=request_id,
+            message=request.message,
+            intent=result.get("intent"),
+            anomaly_detected=result.get("anomaly_detected", False),
+            summary=result.get("response", ""),
+            warnings=result.get("warnings", []),
+        )
+
+        return response
 
     except HTTPException:
         raise
@@ -96,12 +136,14 @@ async def agent(request: AgentRequest) -> AgentResponse:
 async def analyze_file(
     file: UploadFile = File(...),
     context: Optional[str] = Form(None),
+    x_session_id: Optional[str] = Header(default=None),
 ) -> AnalyzeResponse:
     """
     Document analysis endpoint.
 
-    Accepts: multipart/form-data with a PDF, DOCX, TXT, CSV, or XLSX file.
-    Optional `context` field provides a hint to the classifier (e.g. job title being hired for).
+    Accepts: multipart/form-data with a PDF, DOCX, TXT, CSV, XLSX, or image file.
+    Optional header X-Session-ID groups related calls into one session.
+    Optional `context` field provides a hint to the classifier.
     Returns: AnalyzeResponse with doc_type, key_fields, summary, and action trail.
     """
     filename = (file.filename or "").strip()
@@ -122,7 +164,20 @@ async def analyze_file(
             context=context or "",
         )
         result["actions_taken"] = _normalize_actions(result.get("actions_taken"))
-        return AnalyzeResponse(**result)
+        response = AnalyzeResponse(**result)
+
+        await save_analyze_session(
+            session_id=x_session_id,
+            request_id=request_id,
+            filename=filename,
+            doc_type=result.get("doc_type", "unknown"),
+            doc_type_confidence=result.get("doc_type_confidence", 0.0),
+            recommendation=_extract_recommendation(result.get("analysis", {})),
+            summary=result.get("summary", ""),
+            warnings=result.get("warnings", []),
+        )
+
+        return response
 
     except HTTPException:
         raise
@@ -140,3 +195,19 @@ async def analyze_file(
             ],
             warnings=[str(e)],
         )
+
+
+@app.get("/sessions", response_model=List[SessionRecord])
+async def get_sessions(limit: int = Query(default=20, ge=1, le=100)):
+    """Return the most recent sessions across all endpoints."""
+    rows = await list_sessions(limit=limit)
+    return [SessionRecord(**r) for r in rows]
+
+
+@app.get("/sessions/{session_id}", response_model=List[SessionRecord])
+async def get_session(session_id: str):
+    """Return all records grouped under a specific session_id."""
+    rows = await get_sessions_by_id(session_id)
+    if not rows:
+        raise HTTPException(status_code=404, detail=f"No session found: {session_id}")
+    return [SessionRecord(**r) for r in rows]

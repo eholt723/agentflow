@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     # Application
     log_level: str = "INFO"
     debug: bool = False
+    db_path: str = "agentflow.db"
 
     # n8n workflow automation
     n8n_webhook_url: str = ""
