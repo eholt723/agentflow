@@ -11,23 +11,35 @@ from api.app.graph.nodes.analyze_resume import analyze_resume
 from api.app.graph.nodes.analyze_cover_letter import analyze_cover_letter
 from api.app.graph.nodes.analyze_interview import analyze_interview
 from api.app.graph.nodes.analyze_scorecard import analyze_scorecard
+from api.app.graph.tools.notification_tool import send_notification
 from api.app.schemas.analyze import AnalyzeState
 from api.app.schemas.agent import ToolAction
 
 logger = logging.getLogger(__name__)
 
 
-def write_analyze_memo(state: AnalyzeState) -> Dict[str, Any]:
+async def write_analyze_memo(state: AnalyzeState) -> Dict[str, Any]:
     """
-    Final node — logs completion and emits the finalize action.
+    Final node — logs completion, fires optional n8n notification, emits finalize action.
     Analysis nodes enrich `analysis` and `summary` before this runs.
     """
+    doc_type = state.get("doc_type")
+    recommendation = state.get("analysis", {}).get("recommendation", "n/a")
     logger.info(
         "analyze_finalize request_id=%s doc_type=%s recommendation=%s",
         state.get("request_id"),
-        state.get("doc_type"),
-        state.get("analysis", {}).get("recommendation", "n/a"),
+        doc_type,
+        recommendation,
     )
+
+    await send_notification({
+        "request_id": state.get("request_id"),
+        "filename": state.get("filename"),
+        "doc_type": doc_type,
+        "recommendation": recommendation,
+        "summary": state.get("summary", ""),
+    })
+
     return {
         "actions_taken": [
             ToolAction(kind="event", name="analyze_finalize", ok=True, ms=0, details={})
