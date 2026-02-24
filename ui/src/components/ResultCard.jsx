@@ -2,6 +2,7 @@ import { useState } from 'react'
 
 const DOC_TYPE_COLORS = {
   resume:          'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
+  cover_letter:    'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300',
   interview_notes: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
   scorecard:       'bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300',
   job_desc:        'bg-teal-100 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300',
@@ -12,6 +13,7 @@ const RECOMMENDATION_STYLES = {
   strong_hire: { pill: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300', label: 'Strong Hire' },
   hire:        { pill: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',   label: 'Hire' },
   consider:    { pill: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',   label: 'Consider' },
+  follow_up:   { pill: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300',           label: 'Follow Up' },
   pass:        { pill: 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',       label: 'Pass' },
 }
 
@@ -134,6 +136,19 @@ function AnalysisDetail({ analysis, docType }) {
         value: analysis.risk_signals.map(r => `${r.signal} (${r.severity})`).join(' · '),
       })
     }
+  }
+
+  if (docType === 'cover_letter') {
+    if (analysis.first_impression)
+      items.push({ label: 'First Impression', value: analysis.first_impression })
+    if (analysis.motivation_clarity)
+      items.push({ label: 'Motivation Clarity', value: analysis.motivation_clarity })
+    if (analysis.communication_quality)
+      items.push({ label: 'Communication Quality', value: analysis.communication_quality })
+    if (analysis.role_fit_signals?.length)
+      items.push({ label: 'Role Fit Signals', value: analysis.role_fit_signals.join(' · ') })
+    if (analysis.red_flags?.length)
+      items.push({ label: 'Red Flags', value: analysis.red_flags.join(' · ') })
   }
 
   if (docType === 'interview_notes') {

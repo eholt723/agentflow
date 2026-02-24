@@ -10,6 +10,7 @@ from api.app.schemas.agent import ToolAction
 
 VALID_DOC_TYPES = {
     "resume",
+    "cover_letter",
     "job_desc",
     "interview_notes",
     "scorecard",

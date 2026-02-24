@@ -17,11 +17,12 @@ _CLASSIFY_SYSTEM_PROMPT = """You are a document classifier for an HR and hiring 
 Analyze the document text provided and return ONLY a valid JSON object with these exact fields:
 
 {
-  "doc_type": "<one of: resume, job_desc, interview_notes, scorecard, policy_doc, perf_review, unknown>",
+  "doc_type": "<one of: resume, cover_letter, job_desc, interview_notes, scorecard, policy_doc, perf_review, unknown>",
   "confidence": <float 0.0 to 1.0>,
   "summary": "<1-2 sentence description of what this document is>",
   "key_fields": {
     // resume:          { "name": "", "current_role": "", "top_skills": [], "years_experience": "", "education": "" }
+    // cover_letter:    { "candidate_name": "", "target_role": "", "target_company": "", "key_selling_points": [] }
     // job_desc:        { "title": "", "company": "", "required_skills": [], "seniority_level": "" }
     // interview_notes: { "candidate_name": "", "interview_date": "", "interviewer": "", "key_observations": [], "concerns": [] }
     // scorecard:       { "candidate_name": "", "dimensions": [{"name": "", "score": ""}], "overall_rating": "" }
@@ -30,6 +31,15 @@ Analyze the document text provided and return ONLY a valid JSON object with thes
     // unknown:         {}
   }
 }
+
+IMPORTANT — distinguish carefully between these two commonly confused types:
+- "resume": structured document with clearly delineated sections (Work Experience, Education,
+  Skills, Certifications), bullet points listing past roles with dates, typically 1-2 pages of
+  work history. The structure is the signal — look for dated job entries and section headers.
+- "cover_letter": a narrative letter of introduction addressed to a hiring manager or company.
+  Written in prose paragraphs expressing motivation and fit. Does NOT have structured job-history
+  bullet points with dates. Often begins with "Dear" or "To Whom It May Concern" or a direct
+  opening about why they are applying.
 
 Return ONLY the JSON object. No markdown fences, no explanation."""
 

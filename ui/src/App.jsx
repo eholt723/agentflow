@@ -87,11 +87,9 @@ export default function App() {
         </div>
       </main>
 
-      <footer className="max-w-5xl mx-auto px-4 pb-6 flex justify-end">
-        <div className="text-right">
-          <p className="text-xs text-slate-400 dark:text-slate-600">Created by</p>
-          <p className="text-xs font-medium text-slate-500 dark:text-slate-500">Eric Holt</p>
-        </div>
+      <footer className="fixed bottom-3 right-5 text-right pointer-events-none">
+        <p className="text-xs text-slate-400 dark:text-slate-600">Created by</p>
+        <p className="text-xs font-medium text-slate-500 dark:text-slate-500">Eric Holt</p>
       </footer>
     </div>
   )

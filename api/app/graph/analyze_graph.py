@@ -8,6 +8,7 @@ from langgraph.graph import END, StateGraph
 
 from api.app.graph.nodes.classify_document import classify_document
 from api.app.graph.nodes.analyze_resume import analyze_resume
+from api.app.graph.nodes.analyze_cover_letter import analyze_cover_letter
 from api.app.graph.nodes.analyze_interview import analyze_interview
 from api.app.graph.nodes.analyze_scorecard import analyze_scorecard
 from api.app.schemas.analyze import AnalyzeState
@@ -38,6 +39,8 @@ def _route_after_classify(state: AnalyzeState) -> str:
     doc_type = state.get("doc_type", "unknown")
     if doc_type == "resume":
         return "analyze_resume"
+    if doc_type == "cover_letter":
+        return "analyze_cover_letter"
     if doc_type == "interview_notes":
         return "analyze_interview"
     if doc_type == "scorecard":
@@ -50,6 +53,7 @@ def _build_analyze_graph() -> StateGraph:
 
     builder.add_node("classify_document", classify_document)
     builder.add_node("analyze_resume", analyze_resume)
+    builder.add_node("analyze_cover_letter", analyze_cover_letter)
     builder.add_node("analyze_interview", analyze_interview)
     builder.add_node("analyze_scorecard", analyze_scorecard)
     builder.add_node("write_analyze_memo", write_analyze_memo)
@@ -57,6 +61,7 @@ def _build_analyze_graph() -> StateGraph:
     builder.set_entry_point("classify_document")
     builder.add_conditional_edges("classify_document", _route_after_classify)
     builder.add_edge("analyze_resume", "write_analyze_memo")
+    builder.add_edge("analyze_cover_letter", "write_analyze_memo")
     builder.add_edge("analyze_interview", "write_analyze_memo")
     builder.add_edge("analyze_scorecard", "write_analyze_memo")
     builder.add_edge("write_analyze_memo", END)
