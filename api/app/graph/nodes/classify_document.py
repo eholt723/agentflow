@@ -52,6 +52,24 @@ def _extension_fallback(extension: str) -> str:
     }.get(extension, "unknown")
 
 
+_FILENAME_KEYWORDS: list[tuple[list[str], str]] = [
+    (["cover letter", "cover_letter", "coverletter", "letter of interest", "letter of application"], "cover_letter"),
+    (["interview notes", "interview_notes", "interview feedback"], "interview_notes"),
+    (["scorecard", "score card", "hiring scorecard"], "scorecard"),
+    (["job description", "job_description", "job desc", "jd "], "job_desc"),
+    (["performance review", "perf review", "annual review"], "perf_review"),
+]
+
+
+def _filename_precheck(filename: str) -> str | None:
+    """Return a doc_type if the filename unambiguously identifies the document, else None."""
+    lower = filename.lower()
+    for keywords, doc_type in _FILENAME_KEYWORDS:
+        if any(kw in lower for kw in keywords):
+            return doc_type
+    return None
+
+
 async def classify_document(state: AnalyzeState) -> Dict[str, Any]:
     """
     Classify the uploaded document type and extract key fields via LLM.
@@ -59,7 +77,27 @@ async def classify_document(state: AnalyzeState) -> Dict[str, Any]:
     """
     text = state["text"]
     extension = state["extension"]
+    filename = state["filename"]
     t0 = time.perf_counter()
+
+    # Deterministic pre-check: filename is more reliable than LLM for obvious cases
+    precheck_type = _filename_precheck(filename)
+    if precheck_type:
+        elapsed_ms = int((time.perf_counter() - t0) * 1000)
+        logger.info(
+            "classify_document filename_precheck filename=%s doc_type=%s ms=%d",
+            filename, precheck_type, elapsed_ms,
+        )
+        return {
+            "doc_type": precheck_type,
+            "doc_type_confidence": 0.97,
+            "key_fields": {},
+            "summary": f"Classified as {precheck_type.replace('_', ' ')} based on filename.",
+            "actions_taken": [
+                ToolAction(kind="route", name="classify_document", ok=True, ms=elapsed_ms,
+                           details={"doc_type": precheck_type, "method": "filename_precheck"})
+            ],
+        }
 
     if not text.strip():
         elapsed_ms = int((time.perf_counter() - t0) * 1000)
