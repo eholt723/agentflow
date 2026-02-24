@@ -4,10 +4,12 @@ from __future__ import annotations
 import logging
 import uuid
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any, List, Optional
 
 from fastapi import FastAPI, File, Form, Header, HTTPException, Query, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from api.app.db.database import init_db
 from api.app.db.repository import (
@@ -211,3 +213,21 @@ async def get_session(session_id: str):
     if not rows:
         raise HTTPException(status_code=404, detail=f"No session found: {session_id}")
     return [SessionRecord(**r) for r in rows]
+
+
+# ---------------------------------------------------------------------------
+# Static UI — only active when the React build is present (i.e. in Docker /
+# production). In local dev the Vite server runs separately on :5173.
+# ---------------------------------------------------------------------------
+_UI_DIST = Path(__file__).resolve().parent.parent.parent / "ui" / "dist"
+
+if _UI_DIST.exists():
+    app.mount("/assets", StaticFiles(directory=str(_UI_DIST / "assets")), name="ui-assets")
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_spa(full_path: str):
+        """Serve static files directly; fall back to index.html for SPA routing."""
+        target = _UI_DIST / full_path
+        if target.is_file():
+            return FileResponse(str(target))
+        return FileResponse(str(_UI_DIST / "index.html"))
