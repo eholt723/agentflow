@@ -1,10 +1,13 @@
 # graph/nodes/write_memo.py
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict
 
 from api.app.schemas.agent import ToolAction
 from api.app.schemas.decision import GraphState
+
+logger = logging.getLogger(__name__)
 
 
 def write_memo(state: GraphState) -> Dict[str, Any]:
@@ -37,6 +40,7 @@ def write_memo(state: GraphState) -> Dict[str, Any]:
     else:
         response = f"Agent processed: {state['message']}"
 
+    logger.info("graph_finalize request_id=%s anomaly=%s", state.get("request_id"), anomaly_detected)
     return {
         "response": response,
         "actions_taken": [
