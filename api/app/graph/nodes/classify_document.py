@@ -76,8 +76,9 @@ async def classify_document(state: AnalyzeState) -> Dict[str, Any]:
             "warnings": ["Document text was empty; classification defaulted to extension."],
         }
 
+    filename_hint = f"Filename: {state['filename']}\n\n"
     context_hint = f"\n\nContext from user: {state['context']}" if state.get("context") else ""
-    user_prompt = f"Document text:\n\n{text}{context_hint}"
+    user_prompt = f"{filename_hint}Document text:\n\n{text}{context_hint}"
 
     try:
         raw = await run_inference(_CLASSIFY_SYSTEM_PROMPT, user_prompt)

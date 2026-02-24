@@ -133,7 +133,7 @@ function AnalysisDetail({ analysis, docType }) {
     if (analysis.risk_signals?.length) {
       items.push({
         label: 'Risk Signals',
-        value: analysis.risk_signals.map(r => `${r.signal} (${r.severity})`).join(' · '),
+        value: analysis.risk_signals.map(r => `${r.flag} (${r.severity})`).join(' · '),
       })
     }
   }
