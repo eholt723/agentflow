@@ -72,3 +72,5 @@ tmp/
 
 # Node (if frontend ever added)
 node_modules/
+ui/dist
+ui/node_modules
