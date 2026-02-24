@@ -10,7 +10,7 @@ export default function Header({ dark, onToggle }) {
           AgentFlow
         </h1>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-          AI-Powered Hiring Intelligence
+          AI-Powered Document Intelligence
         </p>
       </div>
 
