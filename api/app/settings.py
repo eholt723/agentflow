@@ -3,9 +3,10 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    # Inference service
-    inference_base_url: str = "http://localhost:8080"
-    inference_model: str = "local-model"
+    # Groq inference
+    groq_api_key: str = ""
+    groq_base_url: str = "https://api.groq.com/openai/v1"
+    groq_model: str = "llama-3.3-70b-versatile"
     inference_timeout_seconds: int = 30
 
     # Application
