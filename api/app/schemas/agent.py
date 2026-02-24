@@ -4,7 +4,7 @@ from typing import Optional, List, Dict, Any, Literal
 
 
 class ToolAction(BaseModel):
-    kind: Literal["route", "tool", "event"]
+    kind: Literal["route", "tool", "event", "llm"]
     name: str
     ok: bool = True
     ms: int = 0
