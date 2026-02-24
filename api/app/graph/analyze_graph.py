@@ -7,6 +7,7 @@ from typing import Any, Dict
 from langgraph.graph import END, StateGraph
 
 from api.app.graph.nodes.classify_document import classify_document
+from api.app.graph.nodes.analyze_resume import analyze_resume
 from api.app.schemas.analyze import AnalyzeState
 from api.app.schemas.agent import ToolAction
 
@@ -15,13 +16,14 @@ logger = logging.getLogger(__name__)
 
 def write_analyze_memo(state: AnalyzeState) -> Dict[str, Any]:
     """
-    Formats the final analyze response from accumulated graph state.
-    Analysis nodes (resume, interview, scorecard) will enrich `analysis`
-    before this node runs. For now it packages classifier output.
+    Final node — logs completion and emits the finalize action.
+    Analysis nodes enrich `analysis` and `summary` before this runs.
     """
     logger.info(
-        "analyze_finalize request_id=%s doc_type=%s",
-        state.get("request_id"), state.get("doc_type"),
+        "analyze_finalize request_id=%s doc_type=%s recommendation=%s",
+        state.get("request_id"),
+        state.get("doc_type"),
+        state.get("analysis", {}).get("recommendation", "n/a"),
     )
     return {
         "actions_taken": [
@@ -30,14 +32,25 @@ def write_analyze_memo(state: AnalyzeState) -> Dict[str, Any]:
     }
 
 
+def _route_after_classify(state: AnalyzeState) -> str:
+    doc_type = state.get("doc_type", "unknown")
+    if doc_type == "resume":
+        return "analyze_resume"
+    # interview_notes → "analyze_interview"  (Phase 4b)
+    # scorecard       → "analyze_scorecard"  (Phase 4b)
+    return "write_analyze_memo"
+
+
 def _build_analyze_graph() -> StateGraph:
     builder = StateGraph(AnalyzeState)
 
     builder.add_node("classify_document", classify_document)
+    builder.add_node("analyze_resume", analyze_resume)
     builder.add_node("write_analyze_memo", write_analyze_memo)
 
     builder.set_entry_point("classify_document")
-    builder.add_edge("classify_document", "write_analyze_memo")
+    builder.add_conditional_edges("classify_document", _route_after_classify)
+    builder.add_edge("analyze_resume", "write_analyze_memo")
     builder.add_edge("write_analyze_memo", END)
 
     return builder.compile()
