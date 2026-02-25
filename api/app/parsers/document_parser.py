@@ -71,11 +71,47 @@ def _parse_pdf(filename: str, ext: str, content: bytes) -> ParsedDocument:
                 t = page.extract_text()
                 if t:
                     text_parts.append(t)
-        text = "\n".join(text_parts)
-        logger.info("pdf_parse filename=%s pages=%d chars=%d", filename, page_count, len(text))
-        return ParsedDocument(filename=filename, extension=ext, text=text)
+        text = "\n".join(text_parts).strip()
+        if text:
+            logger.info("pdf_parse filename=%s pages=%d chars=%d", filename, page_count, len(text))
+            return ParsedDocument(filename=filename, extension=ext, text=text)
+        # Text layer empty — try PyMuPDF (handles more encoding types and design-tool PDFs)
+        logger.info("pdf_pdfplumber_empty filename=%s pages=%d — falling back to pymupdf", filename, page_count)
+        return _parse_pdf_pymupdf(filename, ext, content)
     except Exception as e:
         logger.error("pdf_parse_failed filename=%s error=%s", filename, e)
+        return ParsedDocument(filename=filename, extension=ext, parse_error=str(e))
+
+
+def _parse_pdf_pymupdf(filename: str, ext: str, content: bytes) -> ParsedDocument:
+    """
+    Fallback PDF parser using PyMuPDF.
+    1. Tries text extraction (handles design-tool and non-standard encodings).
+    2. If still empty, renders the first page to PNG and routes through the vision pipeline.
+    """
+    import fitz  # PyMuPDF
+    try:
+        doc = fitz.open(stream=content, filetype="pdf")
+        text_parts: List[str] = []
+        for page in doc:
+            t = page.get_text()
+            if t.strip():
+                text_parts.append(t)
+        text = "\n".join(text_parts).strip()
+        if text:
+            logger.info("pdf_pymupdf filename=%s pages=%d chars=%d", filename, len(doc), len(text))
+            return ParsedDocument(filename=filename, extension=ext, text=text)
+        # Truly image-based PDF — render first page to PNG for vision model
+        logger.info("pdf_pymupdf_empty filename=%s — rendering page 1 to image for vision", filename)
+        page = doc[0]
+        pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))  # 2x scale for legibility
+        image_bytes = pix.tobytes("png")
+        return ParsedDocument(
+            filename=filename, extension=ext,
+            image_bytes=image_bytes, image_media_type="image/png",
+        )
+    except Exception as e:
+        logger.error("pdf_pymupdf_failed filename=%s error=%s", filename, e)
         return ParsedDocument(filename=filename, extension=ext, parse_error=str(e))
 
 
