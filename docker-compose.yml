@@ -2,9 +2,9 @@ services:
   api:
     build:
       context: .
-      dockerfile: api/Dockerfile
+      dockerfile: Dockerfile
     ports:
-      - "8000:8000"
+      - "7860:7860"
     env_file:
       - .env
     environment:
@@ -13,7 +13,7 @@ services:
       - db_data:/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:7860/health')"]
       interval: 30s
       timeout: 5s
       retries: 3
