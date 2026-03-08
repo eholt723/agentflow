@@ -33,8 +33,8 @@ export default function UploadZone({ onSubmit, loading }) {
         className={[
           'flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed cursor-pointer transition-colors px-6 py-12',
           dragging
-            ? 'border-indigo-400 bg-indigo-50 dark:bg-indigo-950/30'
-            : 'border-slate-300 dark:border-slate-600 hover:border-indigo-400 dark:hover:border-indigo-500 bg-slate-50 dark:bg-slate-800/50',
+            ? 'border-cyan-400 bg-cyan-50 dark:bg-cyan-950/30'
+            : 'border-slate-300 dark:border-slate-600 hover:border-cyan-400 dark:hover:border-cyan-500 bg-slate-50 dark:bg-slate-800/50',
         ].join(' ')}
       >
         <input
@@ -78,7 +78,7 @@ export default function UploadZone({ onSubmit, loading }) {
           value={context}
           onChange={(e) => setContext(e.target.value)}
           placeholder='e.g. "Backend engineer role, 5 years exp required"'
-          className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+          className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 px-3 py-2.5 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition"
         />
       </div>
 
@@ -86,7 +86,7 @@ export default function UploadZone({ onSubmit, loading }) {
       <button
         type="submit"
         disabled={!file || loading}
-        className="flex items-center justify-center gap-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-medium py-2.5 text-sm transition-colors"
+        className="flex items-center justify-center gap-2 rounded-lg bg-cyan-600 hover:bg-cyan-500 disabled:bg-slate-300 dark:disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-medium py-2.5 text-sm transition-colors"
       >
         {loading ? (
           <>
@@ -112,7 +112,7 @@ function UploadIcon() {
 
 function FileIcon() {
   return (
-    <svg className="w-10 h-10 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <svg className="w-10 h-10 text-cyan-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
         d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
     </svg>
