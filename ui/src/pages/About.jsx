@@ -37,7 +37,7 @@ const achievements = [
   'SQLite session persistence with session grouping via X-Session-ID header',
   'Deterministic pre-check for cover letters fires before LLM (0.97 confidence)',
   'Pydantic Settings — zero hardcoded config, everything from environment',
-  'Contract test suite — all API contracts validated before deploy',
+  '40+ tests across 4 files: HTTP contract tests for all endpoints, Pydantic schema validation, async DB layer, and session grouping — all external calls mocked, no API keys needed',
   'Docker Compose multi-container setup with named volume for data',
   'Deployed to Hugging Face Spaces — free hosting, zero infrastructure cost',
 ]
