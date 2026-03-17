@@ -37,12 +37,13 @@ Supported file formats: PDF, DOCX, TXT, CSV, XLSX, JPG, PNG, WEBP (images proces
 | Layer | Technology |
 |---|---|
 | Agent pipeline | LangGraph 0.2 — compiled `StateGraph` with typed state and conditional routing |
-| LLM | Groq — `llama-3.3-70b-versatile` (text), `llama-4-scout-17b-16e-instruct` (vision) |
+| LLM | Groq — `llama-3.3-70b-versatile` (text), `meta-llama/llama-4-scout-17b-16e-instruct` (vision) |
 | Document parsing | pdfplumber, PyMuPDF (fallback), python-docx, pandas |
 | Backend | FastAPI, Python 3.12, Uvicorn |
 | Validation | Pydantic v2 (schema-first) |
+| Retry | Tenacity 8.3 — 3 attempts, exponential backoff, retries on 429 / 5xx |
 | Database | SQLite via aiosqlite |
-| Frontend | React 19, Vite, Tailwind CSS |
+| Frontend | React 19, Vite 7, Tailwind CSS 3 |
 | Hosting | Hugging Face Spaces (Docker) |
 | Automation | n8n webhook stub (optional — `N8N_ENABLED=true`) |
 
@@ -51,24 +52,38 @@ Supported file formats: PDF, DOCX, TXT, CSV, XLSX, JPG, PNG, WEBP (images proces
 ## Architecture
 
 ```
-File upload (PDF / DOCX / TXT / CSV / XLSX / image)
-        │
-  document_parser.py ── pdfplumber → PyMuPDF fallback → Groq vision (scanned PDFs / images)
-        │
-  classify_document.py ── filename pre-check (cover letters) → Groq LLM → doc_type + confidence
-        │
-  ┌─────┴──────────────────────────────────────┐
-  │           route on doc_type                │
-  └──┬──────────┬──────────┬───────────────────┘
-     │          │          │
-  resume  interview  scorecard / cover_letter
-     │          │          │
-     └──────────┴──────────┘
-              LangGraph analysis nodes (Groq LLM)
-                        │
-              write_memo.py ── structured decision memo
-                        │
-              SQLite (aiosqlite) ── session persisted, grouped via X-Session-ID
+┌──────────────────────────────────────────────────────────┐
+│  File upload  (PDF · DOCX · TXT · CSV · XLSX · image)    │
+└─────────────────────────┬────────────────────────────────┘
+                          │ raw bytes
+                          ▼
+┌──────────────────────────────────────────────────────────┐
+│  document_parser.py                                      │
+│  pdfplumber → PyMuPDF fallback → Groq vision             │
+└─────────────────────────┬────────────────────────────────┘
+                          │ extracted text
+                          ▼
+┌──────────────────────────────────────────────────────────┐
+│  classify_document.py                                    │
+│  filename pre-check → Groq LLM → doc_type + confidence  │
+└──────┬──────────────────┬──────────────────┬─────────────┘
+       │ resume           │ interview        │ scorecard / cover letter
+       ▼                  ▼                  ▼
+┌──────────────────────────────────────────────────────────┐
+│  LangGraph analysis nodes  (Groq LLM)                   │
+│  analyze_resume · analyze_interview ·                   │
+│  analyze_scorecard · analyze_cover_letter               │
+└─────────────────────────┬────────────────────────────────┘
+                          │ structured analysis
+                          ▼
+┌──────────────────────────────────────────────────────────┐
+│  write_memo.py  — decision memo + full action trail      │
+└─────────────────────────┬────────────────────────────────┘
+                          │ session record
+                          ▼
+┌──────────────────────────────────────────────────────────┐
+│  SQLite (aiosqlite)  — grouped via X-Session-ID          │
+└──────────────────────────────────────────────────────────┘
 ```
 
 | Layer | Responsibility |
@@ -214,6 +229,9 @@ agentflow/
 │   ├── test_analyze.py                     # HTTP contract tests for /agent/analyze
 │   ├── test_schemas.py                     # Unit tests: Pydantic schemas, _normalize_actions, async DB layer
 │   └── test_sessions.py                    # Tests for GET /sessions and GET /sessions/{session_id}
+├── .github/
+│   └── workflows/
+│       └── ci.yml                          # GitHub Actions: runs unit tests on push/PR to main (no API keys needed)
 ├── Dockerfile                              # Multi-stage: Node 20 builds React UI, Python 3.12 serves via FastAPI
 ├── docker-compose.yml                      # API service + db_data named volume
 └── pyproject.toml                          # Project config, pytest settings, coverage config
