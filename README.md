@@ -236,3 +236,23 @@ agentflow/
 ├── docker-compose.yml                      # API service + db_data named volume
 └── pyproject.toml                          # Project config, pytest settings, coverage config
 ```
+
+---
+
+## Design Decisions
+
+**Single server serves both API and frontend.** The Dockerfile builds the React app with Vite, then copies `ui/dist/` into the Python image. FastAPI serves the static files directly via `StaticFiles` with a catch-all SPA fallback. The alternative — a separate static host (nginx, S3, CDN) — is standard on real production infrastructure but requires either a second container or a separate hosting account, neither of which is justified on a single free-tier HF Spaces instance.
+
+**Static file mount is conditional on `ui/dist` existing.** `main.py` only mounts the React build if the `ui/dist` directory is present at startup. This means the same codebase runs in local dev (Vite on `:5173`, no build needed) and in production (FastAPI serves the build) without any environment flag or code change. The alternative — always requiring the build or guarding with an env var — would complicate local development.
+
+**Notification hook swallows all errors.** `notification_tool.py` catches every exception and returns `False` rather than raising. A dead or unconfigured webhook cannot crash the analysis pipeline. The alternative (propagating errors) would make n8n a hard runtime dependency, breaking every analysis request when the webhook isn't set up — which is the default state for anyone running the project.
+
+---
+
+## Future Improvements
+
+- **Persistent database** — SQLite on HF Spaces free tier is ephemeral; a real deployment would use PostgreSQL (e.g. Neon serverless). Not done because it requires an external database account and the demo doesn't depend on run history surviving a redeploy.
+- **Authentication** — all sessions are anonymous and public. A production system would add OAuth or API key auth to gate access and associate sessions to verified identities. Not done because this is a portfolio demo, not a multi-tenant product.
+- **Streaming analysis output** — the pipeline waits for the full LLM response before returning. Token-level streaming would give faster perceived response time. Not done because LangGraph node outputs are batch-resolved; streaming would require restructuring the graph.
+- **Multi-document synthesis** — the `X-Session-ID` header groups related documents (e.g. resume + interview for one candidate) but the pipeline analyzes each in isolation. A cross-document synthesis node could compare and reconcile findings. Not done — the current phase focuses on per-document analysis.
+- **Rate limiting** — there is no per-IP or per-session rate limit on the Groq-backed endpoints. Heavy use could exhaust the free-tier quota without warning. Not done because demo traffic is minimal and Groq's own 429 handling (via Tenacity retry) covers transient overload.

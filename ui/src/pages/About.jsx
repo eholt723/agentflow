@@ -28,6 +28,33 @@ const pipeline = [
   },
 ]
 
+const useCases = [
+  {
+    title: 'Customer Support Triage',
+    desc: 'Classify incoming tickets and escalation emails by type and urgency, then extract the key complaint, affected product, and recommended action — before a human ever reads it.',
+  },
+  {
+    title: 'Sales Call Intelligence',
+    desc: 'Upload a meeting transcript or call notes and extract deal stage, open objections, commitments made, and suggested next steps as a structured memo.',
+  },
+  {
+    title: 'Performance Review Analysis',
+    desc: 'Run employee self-assessments and manager evaluations through the pipeline to surface recurring themes, flag concerns, and generate a structured recommendation.',
+  },
+  {
+    title: 'Contract Risk Extraction',
+    desc: 'Feed NDAs, vendor agreements, or SOWs to the classifier and get back a structured breakdown of obligations, deadlines, liability clauses, and flagged risks.',
+  },
+  {
+    title: 'Product Research Synthesis',
+    desc: 'Route user interview transcripts and support ticket exports through analysis nodes to extract feature signals, pain points, and priority themes.',
+  },
+  {
+    title: 'Compliance Document Review',
+    desc: 'Classify audit reports, policy docs, and incident logs by type, then extract gaps, control failures, and required remediation steps in a consistent output format.',
+  },
+]
+
 const achievements = [
   'Multi-format document parsing: PDF, DOCX, TXT, CSV, XLSX, and images',
   'Vision model fallback for scanned PDFs and handwritten notes (Groq llama-4-scout)',
@@ -99,6 +126,27 @@ export default function About() {
                   {item.desc}
                 </p>
               </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Where This Gets Used */}
+      <section className="mb-12">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+          Where This Gets Used
+        </h2>
+        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-6">
+          Most business documents follow the same pattern: unstructured text arrives, someone reads it, and a decision gets made. AgentFlow automates that middle step — classify the document, extract what matters, and return a structured output a system can act on. Here's where it fits.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {useCases.map(u => (
+            <div
+              key={u.title}
+              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3"
+            >
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">{u.title}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{u.desc}</p>
             </div>
           ))}
         </div>
