@@ -33,11 +33,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          lfs: true
 
-      - name: Push to Hugging Face Spaces
+      - name: Push to Hugging Face Spaces (orphan)
         run: |
+          git config user.email "actions@github.com"
+          git config user.name "GitHub Actions"
           git remote add space https://eholt723:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/eholt723/AgentFlow
-          git push space main --force
+          git checkout --orphan hf-deploy
+          git add -A
+          git commit -m "AgentFlow — Hugging Face Space deployment"
+          git push space hf-deploy:main --force
