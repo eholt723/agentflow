@@ -11,7 +11,7 @@ pinned: false
 # AgentFlow
 ### AI-Powered HR Document Intelligence
 
-[![CI](https://github.com/eholt723/agentflow/actions/workflows/ci.yml/badge.svg)](https://github.com/eholt723/agentflow/actions/workflows/ci.yml)
+[![CI/CD](https://github.com/eholt723/agentflow/actions/workflows/ci.yml/badge.svg)](https://github.com/eholt723/agentflow/actions/workflows/ci.yml)
 
 AgentFlow accepts uploaded HR documents — resumes, cover letters, interview notes, scorecards, job descriptions — and runs them through a LangGraph agent pipeline powered by Groq LLM inference. It returns structured analytical output: document classification, skill extraction, risk flags, anomaly detection, hiring recommendations, and narrative decision memos.
 
@@ -95,6 +95,12 @@ Supported file formats: PDF, DOCX, TXT, CSV, XLSX, JPG, PNG, WEBP (images proces
 | Memo assembly | Structured decision memo with key fields, summary, and full action trail |
 | Persistence | SQLite via aiosqlite; related documents grouped under a shared session ID via `X-Session-ID` header |
 | Notification | n8n webhook stub fires after every analysis (opt-in via `N8N_ENABLED=true`) |
+
+---
+
+## Deployment
+
+Every push to `main` runs the CI/CD pipeline on GitHub Actions. If all tests pass, the workflow automatically pushes the latest code to [Hugging Face Spaces](https://huggingface.co/spaces/eholt723/AgentFlow), triggering a Docker rebuild and redeploy. The live demo is available at **https://eholt723-agentflow.hf.space**.
 
 ---
 
